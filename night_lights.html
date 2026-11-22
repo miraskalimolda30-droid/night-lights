@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html lang="ru" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NIGHT LIGHTS — Когда ночь перестаёт быть тёмной?</title>
+
+  <!-- Шрифты: Unbounded для монументальных заголовков, Manrope для чистого интерфейса -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Unbounded:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Three.js (r128) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            obsidian: '#08080D',
+            electric: '#7650F5',
+            lavender: '#B9A4FF',
+            pure: '#FFFFFF',
+          },
+          fontFamily: {
+            display: ['Unbounded', 'sans-serif'],
+            sans: ['Manrope', 'sans-serif'],
+          },
+          borderRadius: {
+            '4xl': '2rem',
+            '5xl': '3rem',
+            '6xl': '4rem',
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    :root {
+      --bg-obsidian: #08080D;
+      --accent-purple: #7650F5;
+      --accent-lavender: #B9A4FF;
+      --text-white: #FFFFFF;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      background-color: var(--bg-obsidian);
+      color: var(--text-white);
+      font-family: 'Manrope', sans-serif;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Кастомный скроллбар */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #08080D;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #7650F5;
+      border-radius: 999px;
+    }
+
+    /* Архитектурная геометрия левой фиолетовой зоны Hero на десктопе */
+    .hero-purple-panel {
+      background: #7650F5;
+      position: relative;
+      border-bottom-right-radius: 56px;
+    }
+
+    @media (min-width: 1024px) {
+      .hero-purple-panel {
+        border-bottom-right-radius: 72px;
+        clip-path: path('M 0 0 L 100% 0 C 94% 26%, 98% 64%, 89% 88% C 85% 97%, 78% 100%, 64% 100% L 0 100% Z');
+        /* Fallback через border-radius для идеального рендеринга во всех браузерах */
+        clip-path: none;
+        border-top-right-radius: 0px;
+        border-bottom-right-radius: 96px;
+      }
+    }
+
+    /* Скруглённый инвертированный переходный вырез (архитектурная арка) */
+    .arch-cutout-top {
+      border-top-left-radius: 48px;
+      border-top-right-radius: 48px;
+    }
+    @media (min-width: 1024px) {
+      .arch-cutout-top {
+        border-top-left-radius: 64px;
+        border-top-right-radius: 64px;
+      }
+    }
+
+    /* Плавная левитация декоративных элементов */
+    @keyframes floatSlow {
+      0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+      }
+      50% {
+        transform: translateY(-14px) rotate(2deg);
+      }
+    }
+
+    @keyframes pulseAura {
+      0%, 100% {
+        opacity: 0.45;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.78;
+        transform: scale(1.06);
+      }
+    }
+
+    .animate-float-slow {
+      animation: floatSlow 7s ease-in-out infinite;
+    }
+
+    .animate-aura {
+      animation: pulseAura 6s ease-in-out infinite;
+    }
+
+    /* Анимация появления при скролле */
+    .reveal-item {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1), transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal-item.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Стили интерактивной кнопки с магнитным откликом */
+    .btn-magnetic {
+      transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+    }
+    .btn-magnetic:hover {
+      box-shadow: 0 18px 40px -10px rgba(8, 8, 13, 0.55);
+    }
+
+    /* Сетка-фон для научных блоков */
+    .grid-subtle {
+      background-image: 
+        linear-gradient(to right, rgba(185, 164, 255, 0.06) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(185, 164, 255, 0.06) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    /* Стеклянная панель на тёмном фоне */
+    .obsidian-surface {
+      background: rgba(14, 14, 24, 0.82);
+      border: 1px solid rgba(185, 164, 255, 0.14);
+      backdrop-filter: blur(18px);
+    }
+
+    /* Световой конус для блока 04 (Экранирование света) */
+    .light-cone-unshielded {
+      background: radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.95) 0%, rgba(185, 164, 255, 0.55) 28%, rgba(118, 80, 245, 0.28) 56%, rgba(8, 8, 13, 0) 76%);
+      transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .light-cone-shielded {
+      background: conic-gradient(from 145deg at 50% 18%, rgba(118, 80, 245, 0) 0deg, rgba(185, 164, 255, 0.72) 22deg, rgba(255, 255, 255, 0.92) 35deg, rgba(185, 164, 255, 0.72) 48deg, rgba(118, 80, 245, 0) 70deg);
+      mask-image: radial-gradient(circle at 50% 18%, black 15%, rgba(0,0,0,0.85) 55%, transparent 88%);
+      -webkit-mask-image: radial-gradient(circle at 50% 18%, black 15%, rgba(0,0,0,0.85) 55%, transparent 88%);
+      transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    .metric-ring {
+      background:
+        radial-gradient(circle at center, #0D0D16 58%, transparent 59%),
+        conic-gradient(var(--ring-color, #7650F5) calc(var(--ring-value, 50) * 1%), rgba(255,255,255,0.08) 0);
+    }
+
+    .survey-bar {
+      transform-origin: left;
+      transition: width 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    input[type="range"] {
+      accent-color: #7650F5;
+    }
+  </style>
+</head>
+<body class="bg-obsidian text-pure selection:bg-lavender selection:text-obsidian">
+
+  <!-- ==================== ВЕРХНЯЯ НАВИГАЦИЯ ==================== -->
+  <header id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
+    <div class="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12 pt-4 pb-3">
+      <div class="flex items-center justify-between rounded-full px-5 py-3 bg-obsidian/70 backdrop-blur-xl border border-white/10 shadow-[0_10px_35px_rgba(0,0,0,0.45)]">
+        
+        <!-- Логотип NIGHT LIGHTS -->
+        <a href="#top" class="flex items-center gap-3 group focus:outline-none">
+          <span class="relative flex items-center justify-center w-9 h-9 rounded-full bg-electric text-pure shadow-[0_0_20px_rgba(118,80,245,0.75)] group-hover:scale-105 transition-transform">
+            <!-- Стилизованная световая иконка -->
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="4.5" fill="currentColor" />
+              <path d="M12 2V5M12 19V22M2 12H5M19 12H22M4.93 4.93L7.05 7.05M16.95 16.95L19.07 19.07M19.07 4.93L16.95 7.05M7.05 16.95L4.93 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="font-display font-bold text-sm sm:text-base tracking-wider uppercase text-pure">
+            NIGHT <span class="text-lavender">LIGHTS</span>
+          </span>
+        </a>
+
+        <!-- Десктопное меню -->
+        <nav class="hidden xl:flex items-center gap-1" aria-label="Основная навигация">
+          <a href="#interactive-map" class="nav-link px-3 py-2 rounded-full text-xs font-medium text-pure/75 hover:text-pure hover:bg-white/5 transition-colors">QR-карта</a>
+          <a href="#direction-map" data-section="Карта светового загрязнения" class="nav-link px-3 py-2 rounded-full text-xs font-medium text-pure/75 hover:text-pure hover:bg-white/5 transition-colors">Карта</a>
+          <a href="#kazakhstan-statistics" class="nav-link px-3 py-2 rounded-full text-xs font-medium text-pure/75 hover:text-pure hover:bg-white/5 transition-colors">Статистика</a>
+          <a href="#survey-results" class="nav-link px-3 py-2 rounded-full text-xs font-medium text-pure/75 hover:text-pure hover:bg-white/5 transition-colors">Опрос</a>
+          <a href="#energy-calculator" class="nav-link px-3 py-2 rounded-full text-xs font-medium text-pure/75 hover:text-pure hover:bg-white/5 transition-colors">Энергия</a>
+          <a href="#direction-solutions" data-section="Возможные решения" class="nav-link px-3 py-2 rounded-full text-xs font-medium text-pure/75 hover:text-pure hover:bg-white/5 transition-colors">Решения</a>
+          <a href="#methodology" class="nav-link px-3 py-2 rounded-full text-xs font-medium text-pure/75 hover:text-pure hover:bg-white/5 transition-colors">Методика</a>
+          <button type="button" data-modal-title="О проекте NIGHT LIGHTS" class="open-preview-modal px-3 py-2 rounded-full text-xs font-medium text-pure/75 hover:text-pure hover:bg-white/5 transition-colors">О проекте</button>
+        </nav>
+
+        <!-- Правая кнопка статуса / мобильное меню -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          <button type="button" data-modal-title="О проекте NIGHT LIGHTS" class="open-preview-modal hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold tracking-wide uppercase bg-electric/20 border border-electric/50 text-lavender hover:bg-electric hover:text-pure transition-all">
+            <span class="w-2 h-2 rounded-full bg-lavender"></span>
+            <span>Проект • Казахстан</span>
+          </button>
+
+          <!-- Кнопка бургер-меню для мобильных -->
+          <button id="mobileMenuBtn" type="button" aria-label="Открыть меню" aria-expanded="false" aria-controls="mobileMenu" class="xl:hidden flex items-center justify-center w-10 h-10 rounded-full bg-white/10 text-pure hover:bg-electric transition-colors">
+            <svg id="burgerIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M4 12h16M10 17h10" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Выпадающее мобильное меню -->
+      <div id="mobileMenu" class="hidden xl:hidden mt-3 rounded-4xl p-5 bg-obsidian/95 border border-lavender/20 backdrop-blur-2xl shadow-2xl">
+        <div class="flex flex-col gap-2">
+          <a href="#top" class="mobile-nav-link px-4 py-3 rounded-2xl text-base font-medium bg-electric text-pure">Главная</a>
+          <a href="#direction-map" class="mobile-nav-link px-4 py-3 rounded-2xl text-base font-medium text-pure/80 hover:bg-white/5">Карта</a>
+          <a href="#kazakhstan-statistics" class="mobile-nav-link px-4 py-3 rounded-2xl text-base font-medium text-pure/80 hover:bg-white/5">Статистика Казахстана</a>
+          <a href="#survey-results" class="mobile-nav-link px-4 py-3 rounded-2xl text-base font-medium text-pure/80 hover:bg-white/5">Результаты опроса</a>
+          <a href="#interactive-map" class="mobile-nav-link px-4 py-3 rounded-2xl text-base font-medium text-pure/80 hover:bg-white/5">Интерактивная карта</a>
+          <a href="#energy-calculator" class="mobile-nav-link px-4 py-3 rounded-2xl text-base font-medium text-pure/80 hover:bg-white/5">Калькулятор энергии</a>
+          <a href="#direction-impact" class="mobile-nav-link px-4 py-3 rounded-2xl text-base font-medium text-pure/80 hover:bg-white/5">Влияние</a>
+          <a href="#direction-solutions" class="mobile-nav-link px-4 py-3 rounded-2xl text-base font-medium text-pure/80 hover:bg-white/5">Решения</a>
+          <a href="#methodology" class="mobile-nav-link px-4 py-3 rounded-2xl text-base font-medium text-pure/80 hover:bg-white/5">Методология и источники</a>
+          <button type="button" data-modal-title="О проекте NIGHT LIGHTS" class="open-preview-modal text-left px-4 py-3 rounded-2xl text-base font-medium text-lavender hover:bg-white/5">О проекте</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== ПЕРВЫЙ ЭКРАН (АСИММЕТРИЧНАЯ HERO-КОМПОЗИЦИЯ) ==================== -->
+  <main id="top" class="relative min-h-screen bg-obsidian overflow-hidden">
+    
+    <!-- Фоновое фиолетовое свечение в чёрной правой зоне -->
+    <div class="pointer-events-none absolute top-1/4 right-[-10%] w-[540px] h-[540px] rounded-full bg-electric/25 blur-[130px] animate-aura"></div>
+    <div class="pointer-events-none absolute bottom-[-8%] right-[18%] w-[380px] h-[380px] rounded-full bg-lavender/15 blur-[110px]"></div>
+
+    <div class="relative max-w-[1440px] mx-auto min-h-screen flex flex-col lg:flex-row">
+      
+      <!-- ЛЕВАЯ ЧАСТЬ (~53% ширины на десктопе): Насыщенная фиолетовая область с необычной геометрией -->
+      <section class="relative z-10 w-full lg:w-[53%] hero-purple-panel pt-28 pb-14 sm:pt-32 sm:pb-16 lg:pt-36 lg:pb-20 px-6 sm:px-10 lg:px-14 xl:px-16 flex flex-col justify-between shadow-[20px_0_80px_rgba(118,80,245,0.28)]">
+        
+        <!-- Декоративная геометрическая вырезка-акцент в правом верхнем углу фиолетовой зоны -->
+        <div class="hidden lg:block pointer-events-none absolute top-28 -right-10 w-20 h-44 rounded-full bg-obsidian border border-lavender/20 shadow-2xl"></div>
+        <div class="hidden lg:flex pointer-events-none absolute bottom-16 -right-8 w-16 h-16 rounded-3xl bg-lavender/20 backdrop-blur-md border border-pure/30 items-center justify-center animate-float-slow">
+          <span class="w-3 h-3 rounded-full bg-pure"></span>
+        </div>
+
+        <!-- Верхний бейдж проекта -->
+        <div class="space-y-6 sm:space-y-8">
+          <div class="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-obsidian/20 border border-pure/25 backdrop-blur-md">
+            <span class="w-2 h-2 rounded-full bg-pure"></span>
+            <span class="font-display text-[11px] sm:text-xs font-semibold tracking-[0.16em] uppercase text-pure">
+              NIGHT LIGHTS • ИССЛЕДОВАНИЕ РК
+            </span>
+          </div>
+
+          <!-- Крупный монументальный заголовок -->
+          <h1 class="font-display font-extrabold text-3xl sm:text-5xl xl:text-[54px] leading-[1.06] tracking-tight uppercase text-pure">
+            КОГДА НОЧЬ ПЕРЕСТАЁТ БЫТЬ ТЁМНОЙ?
+          </h1>
+
+          <!-- Подзаголовок -->
+          <p class="text-base sm:text-lg xl:text-xl font-normal leading-relaxed text-pure/90 max-w-xl">
+            Исследуем влияние искусственного освещения на ночное небо, окружающую среду и жизнь человека в Казахстане.
+          </p>
+        </div>
+
+        <!-- Нижний интерактивный блок левой колонки -->
+        <div class="mt-10 sm:mt-14 pt-6 border-t border-pure/20 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          
+          <!-- Основная кнопка -->
+          <a href="#directions" id="exploreProjectBtn" class="btn-magnetic group inline-flex items-center justify-between sm:justify-start gap-4 px-7 py-4 sm:px-8 sm:py-5 rounded-full bg-obsidian text-pure font-display text-xs sm:text-sm font-semibold tracking-wider uppercase hover:bg-pure hover:text-obsidian">
+            <span>Исследовать проект</span>
+            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-electric text-pure group-hover:bg-obsidian group-hover:text-pure transition-colors">
+              <svg class="w-4 h-4 transform group-hover:translate-x-0.5 group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M7 17L17 7M17 7H8M17 7V16" />
+              </svg>
+            </span>
+          </a>
+
+          <!-- Индикатор интерактивной орбиты / скролла -->
+          <div class="flex items-center gap-3 text-pure/85">
+            <div class="w-10 h-10 rounded-2xl bg-pure/15 border border-pure/25 flex items-center justify-center">
+              <svg class="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </div>
+            <div class="text-xs leading-snug">
+              <span class="block font-semibold text-pure">Орбитальный обзор</span>
+              <span class="text-pure/75">Вращайте 3D-модель курсором</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ПРАВАЯ ЧАСТЬ (~47% ширины на десктопе): Глубокий чёрный фон + 3D-глобус ночного Казахстана -->
+      <section class="relative w-full lg:w-[47%] min-h-[460px] sm:min-h-[540px] lg:min-h-screen flex flex-col justify-between pt-6 pb-12 lg:pt-28 lg:pb-16 px-6 sm:px-10 lg:px-8">
+        
+        <!-- Интерактивный Three.js Canvas контейнер -->
+        <div id="globe-container" class="relative w-full h-[420px] sm:h-[500px] lg:h-[640px] my-auto cursor-grab active:cursor-grabbing rounded-5xl overflow-visible">
+          <!-- WebGL Canvas будет внедрён сюда -->
+          
+          <!-- Всплывающая интерактивная метка фокуса на Казахстан -->
+          <div class="pointer-events-none absolute top-4 left-4 sm:top-6 sm:left-6 obsidian-surface rounded-3xl px-4 py-3 flex items-center gap-3 shadow-xl">
+            <span class="inline-flex h-2.5 w-2.5 rounded-full bg-electric"></span>
+            <div>
+              <p class="font-display text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-pure">Сектор: Казахстан</p>
+              <p class="text-[11px] text-lavender">Ночная Земля • иллюстративные огни</p>
+            </div>
+          </div>
+
+          <!-- Парящий 3D-виджет переключения фокуса камеры на глобусе -->
+          <div class="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-20 flex flex-wrap items-center gap-2 obsidian-surface p-2 rounded-full shadow-2xl">
+            <button type="button" data-focus="kazakhstan" class="globe-focus-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-electric text-pure transition-all">
+              Казахстан
+            </button>
+            <button type="button" data-focus="orbit" class="globe-focus-btn px-3.5 py-1.5 rounded-full text-xs font-semibold text-pure/75 hover:text-pure transition-all">
+              Орбита
+            </button>
+          </div>
+        </div>
+
+        <!-- Нижняя плашка с ключевыми точками наблюдения -->
+        <div class="relative z-10 mt-4 obsidian-surface rounded-4xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-electric/20 border border-electric/40 flex items-center justify-center text-lavender font-display text-xs font-bold">
+              KZ
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-pure">Иллюстративные огни городов</p>
+              <p class="text-xs text-pure/60">Схема, не спутниковые измерения</p>
+            </div>
+          </div>
+          <a href="#methodology" class="text-xs font-semibold text-lavender hover:text-pure underline underline-offset-4 transition-colors">
+            Методика и ограничения →
+          </a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ==================== АРХИТЕКТУРНЫЙ ПЕРЕХОД И 4 НАПРАВЛЕНИЯ ПРОЕКТА ==================== -->
+  <section id="directions" class="relative z-20 -mt-6 lg:-mt-10 bg-obsidian arch-cutout-top border-t border-lavender/15 pt-16 sm:pt-24 pb-24 px-5 sm:px-8 lg:px-12 grid-subtle">
+    <div class="max-w-[1440px] mx-auto">
+      
+      <!-- Заголовок секции с асимметричной подачей -->
+      <div class="reveal-item flex flex-col lg:flex-row lg:items-end justify-between gap-8 pb-14 sm:pb-20 border-b border-white/10">
+        <div class="max-w-3xl space-y-4">
+          <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-electric/15 border border-electric/40 text-lavender text-xs font-display uppercase tracking-widest">
+            <span>Архитектура исследования</span>
+          </div>
+          <h2 class="font-display font-bold text-3xl sm:text-4xl lg:text-5xl leading-[1.1] uppercase text-pure">
+            Четыре вектора изучения <span class="text-lavender">ночного света</span>
+          </h2>
+        </div>
+        <p class="text-sm sm:text-base text-pure/70 max-w-md leading-relaxed">
+          Комплексный обзор научных публикаций, ограниченной городской статистики, восприятия ночного освещения участниками опроса и практик ответственного светотехнического проектирования.
+        </p>
+      </div>
+
+      <!-- АСИММЕТРИЧНАЯ КОМПОЗИЦИЯ ИЗ 4 НАПРАВЛЕНИЙ -->
+      <div class="mt-14 sm:mt-20 space-y-10 lg:space-y-14">
+
+        <!-- ==================== НАПРАВЛЕНИЕ 01: КАРТА СВЕТОВОГО ЗАГРЯЗНЕНИЯ ==================== -->
+        <article id="direction-map" class="reveal-item relative rounded-5xl bg-[#0D0D16] border border-lavender/20 overflow-hidden p-6 sm:p-10 lg:p-12 shadow-[0_25px_70px_rgba(0,0,0,0.6)]">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            
+            <!-- Левая текстовая колонка (5 колонок) -->
+            <div class="lg:col-span-5 space-y-6">
+              <div class="flex items-center gap-4">
+                <span class="font-display text-3xl sm:text-4xl font-extrabold text-electric">01</span>
+                <span class="h-px flex-1 bg-gradient-to-r from-electric to-transparent"></span>
+              </div>
+
+              <h3 class="font-display font-bold text-2xl sm:text-3xl lg:text-4xl leading-tight text-pure">
+                Карта светового загрязнения
+              </h3>
+
+              <p class="text-sm sm:text-base text-pure/75 leading-relaxed">
+                Схематическая карта помогает сориентироваться в положении городов и принципе рассеяния света. Это не карта спутниковой яркости и не измерение качества неба.
+              </p>
+              <p class="text-xs text-pure/50">Граница страны основана на данных Natural Earth. Световые очаги на схеме иллюстративны и не являются спутниковыми измерениями.</p>
+
+              <!-- Интерактивные переключатели слоёв карты -->
+              <div class="pt-2 space-y-3">
+                <span class="block text-xs font-display uppercase tracking-wider text-lavender">Режим визуализации:</span>
+                <div class="inline-flex flex-wrap gap-2 p-1.5 rounded-3xl bg-obsidian border border-white/10">
+                  <button type="button" data-map-mode="clusters" aria-pressed="true" class="map-mode-btn px-4 py-2 rounded-2xl text-xs font-semibold bg-electric text-pure transition-all">
+                    Города
+                  </button>
+                  <button type="button" data-map-mode="diffusion" aria-pressed="false" class="map-mode-btn px-4 py-2 rounded-2xl text-xs font-semibold text-pure/70 hover:text-pure transition-all">
+                    Ореолы рассеяния
+                  </button>
+                  <button type="button" data-map-mode="outline" aria-pressed="false" class="map-mode-btn px-4 py-2 rounded-2xl text-xs font-semibold text-pure/70 hover:text-pure transition-all">
+                    Только контур
+                  </button>
+                </div>
+              </div>
+
+              <div class="pt-2">
+                <a href="https://miraskalimolda30-droid.github.io/skyglow/" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-3 px-6 py-3.5 rounded-full bg-white/5 hover:bg-electric border border-lavender/30 text-sm font-semibold text-pure transition-all">
+                  <span>Открыть отдельную карту</span>
+                  <span>↗</span>
+                </a>
+              </div>
+            </div>
+
+            <!-- Правая визуальная колонка: схематическая карта Казахстана -->
+            <div class="lg:col-span-7">
+              <div id="kzMapBox" class="relative rounded-4xl bg-obsidian border border-lavender/20 p-5 sm:p-8 overflow-hidden min-h-[340px] sm:min-h-[400px] flex flex-col justify-between">
+
+                <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div class="w-[260px] h-[260px] sm:w-[360px] sm:h-[360px] rounded-full border border-lavender/10"></div>
+                  <div class="absolute w-[180px] h-[180px] sm:w-[240px] sm:h-[240px] rounded-full border border-electric/20"></div>
+                </div>
+
+                <div class="relative z-10 flex flex-col items-start gap-2 text-xs sm:flex-row sm:items-center sm:justify-between">
+                  <span id="mapModeLabel" class="px-3.5 py-1.5 rounded-full bg-electric/20 border border-electric/40 text-lavender font-medium">
+                    Иллюстративные города
+                  </span>
+                  <span class="font-mono text-pure/50">Схема • не измерение</span>
+                </div>
+
+                <!-- Стилизованный векторный контур Казахстана с интерактивными световыми узлами -->
+                <div class="relative z-10 my-4 flex items-center justify-center">
+                  <svg id="kzVectorMap" viewBox="0 0 640 340" class="w-full max-w-[560px] h-auto drop-shadow-[0_0_25px_rgba(118,80,245,0.35)]">
+                    <defs>
+                      <radialGradient id="cityGlow" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#FFFFFF" stop-opacity="1" />
+                        <stop offset="35%" stop-color="#B9A4FF" stop-opacity="0.85" />
+                        <stop offset="70%" stop-color="#7650F5" stop-opacity="0.35" />
+                        <stop offset="100%" stop-color="#7650F5" stop-opacity="0" />
+                      </radialGradient>
+                      <radialGradient id="scatterGlow" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#7650F5" stop-opacity="0.22" />
+                        <stop offset="100%" stop-color="#7650F5" stop-opacity="0" />
+                      </radialGradient>
+                    </defs>
+
+                    <image id="kzContour" href="night_lights_assets/kazakhstan-outline.svg" x="0" y="0" width="640" height="340" preserveAspectRatio="none" aria-label="Контур Казахстана по данным Natural Earth" />
+
+                    <!-- Внутренние координатные линии -->
+                    <line x1="90" y1="170" x2="570" y2="170" stroke="rgba(185,164,255,0.14)" stroke-dasharray="4 6" />
+                    <line x1="330" y1="55" x2="330" y2="280" stroke="rgba(185,164,255,0.14)" stroke-dasharray="4 6" />
+
+                    <!-- Световые очаги городов (группа clusters) -->
+                    <g id="layerClusters" class="transition-opacity duration-500">
+                      <!-- Астана -->
+                      <circle cx="365" cy="118" r="38" fill="url(#cityGlow)" />
+                      <circle cx="365" cy="118" r="4.5" fill="#FFFFFF" />
+                      <text x="376" y="114" fill="#FFFFFF" font-size="11" font-family="Manrope" font-weight="600">Астана</text>
+
+                      <!-- Алматы -->
+                      <circle cx="468" cy="242" r="44" fill="url(#cityGlow)" />
+                      <circle cx="468" cy="242" r="5" fill="#FFFFFF" />
+                      <text x="479" y="246" fill="#FFFFFF" font-size="11" font-family="Manrope" font-weight="600">Алматы</text>
+
+                      <!-- Шымкент -->
+                      <circle cx="356" cy="264" r="34" fill="url(#cityGlow)" />
+                      <circle cx="356" cy="264" r="4" fill="#FFFFFF" />
+                      <text x="366" y="274" fill="#B9A4FF" font-size="10" font-family="Manrope">Шымкент</text>
+
+                      <!-- Караганда -->
+                      <circle cx="395" cy="152" r="30" fill="url(#cityGlow)" />
+                      <circle cx="395" cy="152" r="3.5" fill="#FFFFFF" />
+                      <text x="405" y="155" fill="#B9A4FF" font-size="10" font-family="Manrope">Караганда</text>
+
+                      <!-- Атырау -->
+                      <circle cx="115" cy="188" r="28" fill="url(#cityGlow)" />
+                      <circle cx="115" cy="188" r="3.5" fill="#FFFFFF" />
+                      <text x="124" y="191" fill="#B9A4FF" font-size="10" font-family="Manrope">Атырау</text>
+
+                      <!-- Актобе -->
+                      <circle cx="182" cy="134" r="26" fill="url(#cityGlow)" />
+                      <circle cx="182" cy="134" r="3.5" fill="#FFFFFF" />
+                      <text x="191" y="137" fill="#B9A4FF" font-size="10" font-family="Manrope">Актобе</text>
+
+                      <!-- Усть-Каменогорск -->
+                      <circle cx="534" cy="144" r="26" fill="url(#cityGlow)" />
+                      <circle cx="534" cy="144" r="3.5" fill="#FFFFFF" />
+                    </g>
+
+                    <g id="layerScatter" class="opacity-0 transition-opacity duration-500" aria-hidden="true">
+                      <circle cx="365" cy="118" r="76" fill="url(#scatterGlow)" />
+                      <circle cx="468" cy="242" r="88" fill="url(#scatterGlow)" />
+                      <circle cx="356" cy="264" r="68" fill="url(#scatterGlow)" />
+                    </g>
+                  </svg>
+                </div>
+
+                <!-- Нижняя легенда -->
+                <div class="relative z-10 flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/10 text-xs text-pure/65">
+                  <div class="flex items-center gap-4">
+                    <span class="inline-flex items-center gap-1.5"><i class="w-2.5 h-2.5 rounded-full bg-pure inline-block"></i> Город</span>
+                    <span class="inline-flex items-center gap-1.5"><i class="w-2.5 h-2.5 rounded-full bg-electric inline-block"></i> Условный ореол</span>
+                  </div>
+                  <span id="mapModeHint" class="text-lavender">Положение городов условно; яркость не измерена</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- ==================== АСИММЕТРИЧНАЯ ДВУХКОЛОНОЧНАЯ СЕТКА ДЛЯ НАПРАВЛЕНИЙ 02 И 03 ==================== -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-10 items-stretch">
+
+          <!-- НАПРАВЛЕНИЕ 02: ДАННЫЕ И СТАТИСТИКА (6 колонок, контрастная фиолетовая форма) -->
+          <article id="direction-stats" class="reveal-item lg:col-span-6 rounded-5xl bg-electric text-pure p-7 sm:p-10 lg:p-12 flex flex-col justify-between relative overflow-hidden shadow-[0_25px_70px_rgba(118,80,245,0.28)]">
+            
+            <!-- Декоративная арка внутри фиолетового блока -->
+            <div class="pointer-events-none absolute -bottom-16 -right-16 w-64 h-64 rounded-full border-[24px] border-pure/10"></div>
+
+            <div class="space-y-6 relative z-10">
+              <div class="flex items-center justify-between">
+                <span class="font-display text-3xl sm:text-4xl font-extrabold text-pure">02</span>
+                <span class="px-3.5 py-1.5 rounded-full bg-obsidian/20 border border-pure/25 text-xs font-display uppercase tracking-wider">
+                  Исследование двух городов • World Bank
+                </span>
+              </div>
+
+              <h3 class="font-display font-bold text-2xl sm:text-3xl leading-tight">
+                Уличное освещение в двух городах
+              </h3>
+
+              <p class="text-sm sm:text-base text-pure/90 leading-relaxed">
+                Показатели относятся к исследованию Астаны и Алматы, а не всего Казахстана. В отчёте энергопотребление оценивалось по базовому 2015 году; этот год не следует автоматически переносить на показатели охвата.
+              </p>
+
+              <div class="grid grid-cols-3 gap-3">
+                <div class="rounded-3xl bg-obsidian/90 border border-pure/15 p-4 text-center">
+                  <strong class="block font-display text-3xl">98%</strong>
+                  <span class="mt-1 block text-xs text-pure/65">охват Астаны</span>
+                </div>
+                <div class="rounded-3xl bg-obsidian/90 border border-pure/15 p-4 text-center">
+                  <strong class="block font-display text-3xl">92%</strong>
+                  <span class="mt-1 block text-xs text-pure/65">охват Алматы</span>
+                </div>
+                <div class="rounded-3xl bg-obsidian/90 border border-pure/15 p-4 text-center">
+                  <strong class="block font-display text-3xl">80%</strong>
+                  <span class="mt-1 block text-xs text-pure/65">охват пригородов Алматы</span>
+                </div>
+              </div>
+
+              <div class="rounded-4xl bg-obsidian/90 border border-pure/15 p-5">
+                <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 sm:gap-4">
+                  <div>
+                    <span class="text-xs font-display uppercase tracking-wider text-lavender">Потенциал энергосбережения</span>
+                    <strong class="mt-2 block font-display text-5xl">до 50%</strong>
+                  </div>
+                  <span class="text-left sm:text-right text-xs leading-relaxed text-pure/60">потенциал,<br>не результат</span>
+                </div>
+                <p class="mt-4 text-xs text-pure/70 leading-relaxed">
+                  Потенциал экономии описывает возможный эффект модернизации и не означает фактически достигнутую экономию.
+                </p>
+              </div>
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-pure/20 flex items-center justify-between relative z-10">
+              <span class="text-xs font-medium text-pure/85">Энергетическая база исследования • 2015 год</span>
+              <a href="#kazakhstan-statistics" class="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-obsidian text-pure text-xs font-display uppercase tracking-wider font-semibold hover:bg-pure hover:text-obsidian transition-colors">
+                <span>Изучить данные</span>
+                <span>↗</span>
+              </a>
+            </div>
+            <p class="mt-4 text-xs text-pure/65 leading-relaxed relative z-10">Первичный отчёт и точная страница источника для этих показателей требуют дополнительной сверки.</p>
+          </article>
+
+          <!-- НАПРАВЛЕНИЕ 03: ВЛИЯНИЕ НА ЧЕЛОВЕКА И ПРИРОДУ (6 колонок, тёмный архитектурный блок) -->
+          <article id="direction-impact" class="reveal-item lg:col-span-6 rounded-5xl bg-[#0D0D16] border border-lavender/20 p-7 sm:p-10 lg:p-12 flex flex-col justify-between relative overflow-hidden">
+            
+            <div class="space-y-6 relative z-10">
+              <div class="flex items-center justify-between">
+                <span class="font-display text-3xl sm:text-4xl font-extrabold text-lavender">03</span>
+                <!-- Переключатель фокуса: Человек / Экосистема -->
+                <div class="inline-flex p-1 rounded-full bg-obsidian border border-lavender/25">
+                  <button type="button" data-impact="human" aria-pressed="true" class="impact-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-electric text-pure transition-all">
+                    Человек
+                  </button>
+                  <button type="button" data-impact="nature" aria-pressed="false" class="impact-btn px-3.5 py-1.5 rounded-full text-xs font-semibold text-pure/70 hover:text-pure transition-all">
+                    Природа
+                  </button>
+                </div>
+              </div>
+
+              <h3 class="font-display font-bold text-2xl sm:text-3xl leading-tight text-pure">
+                Влияние на человека и природу
+              </h3>
+
+              <!-- Динамический контент переключателя -->
+              <div id="impactContent" class="space-y-4 transition-opacity duration-300">
+                <p id="impactLead" class="text-sm sm:text-base text-pure/80 leading-relaxed">
+                  Искусственный свет в вечернее и ночное время может влиять на циркадные ритмы человека. Влияние зависит от времени, интенсивности и спектра освещения.
+                </p>
+
+                <!-- Визуальные маркеры воздействия -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                  <div class="rounded-3xl bg-obsidian/90 border border-white/10 p-4">
+                    <span id="impactTag1" class="text-[11px] font-display uppercase tracking-wider text-lavender">Циркадный цикл</span>
+                    <p id="impactText1" class="mt-1.5 text-xs sm:text-sm text-pure/85 font-medium">
+                      Смещение фаз биологических часов при ночной засветке окон
+                    </p>
+                  </div>
+                  <div class="rounded-3xl bg-obsidian/90 border border-white/10 p-4">
+                    <span id="impactTag2" class="text-[11px] font-display uppercase tracking-wider text-lavender">Спектр и интенсивность</span>
+                    <p id="impactText2" class="mt-1.5 text-xs sm:text-sm text-pure/85 font-medium">
+                      Высокая чувствительность фоторецепторов сетчатки к холодному свету
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-white/10 flex items-center justify-between relative z-10">
+              <span class="text-xs text-pure/60">Биоритмы и ночная фауна</span>
+              <button type="button" data-modal-title="03 / Биологическое и экологическое воздействие" class="open-preview-modal inline-flex items-center gap-2 px-5 py-3 rounded-full bg-white/5 hover:bg-electric border border-lavender/30 text-pure text-xs font-display uppercase tracking-wider font-semibold transition-all">
+                <span>Подробнее</span>
+                <span>→</span>
+              </button>
+            </div>
+          </article>
+        </div>
+
+        <!-- ==================== НАПРАВЛЕНИЕ 04: ВОЗМОЖНЫЕ РЕШЕНИЯ (ШИРОКИЙ ФИНАЛЬНЫЙ БЛОК С ИНТЕРАКТИВНОЙ ДЕМОНСТРАЦИЕЙ) ==================== -->
+        <article id="direction-solutions" class="reveal-item rounded-5xl bg-[#0D0D16] border border-electric/35 overflow-hidden p-6 sm:p-10 lg:p-12 shadow-[0_30px_90px_rgba(118,80,245,0.16)]">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            
+            <!-- Интерактивная световая сцена (6 колонок) -->
+            <div class="lg:col-span-6 order-2 lg:order-1">
+              <div class="relative rounded-4xl bg-obsidian border border-lavender/20 h-[310px] sm:h-[360px] overflow-hidden flex flex-col justify-between p-6">
+                
+                <!-- Звёздное небо в верхней части демонстратора -->
+                <div id="demoStarsLayer" class="absolute inset-0 transition-opacity duration-700 opacity-30">
+                  <span class="absolute top-8 left-12 w-1 h-1 rounded-full bg-pure"></span>
+                  <span class="absolute top-14 left-1/3 w-1.5 h-1.5 rounded-full bg-lavender"></span>
+                  <span class="absolute top-9 right-20 w-1 h-1 rounded-full bg-pure"></span>
+                  <span class="absolute top-20 right-1/3 w-1 h-1 rounded-full bg-lavender"></span>
+                  <span class="absolute top-12 left-2/3 w-1.5 h-1.5 rounded-full bg-pure"></span>
+                  <span class="absolute top-24 left-16 w-1 h-1 rounded-full bg-lavender"></span>
+                </div>
+
+                <!-- Световой конус уличного светильника -->
+                <div id="lightConeVisual" class="pointer-events-none absolute inset-0 light-cone-unshielded"></div>
+
+                <!-- Верхняя индикация состояния -->
+                <div class="relative z-10 flex items-center justify-between">
+                  <span id="shieldStatusBadge" class="px-3.5 py-1.5 rounded-full bg-white/10 border border-white/15 text-xs font-medium text-pure">
+                    Режим: Неэкранированный рассеянный свет
+                  </span>
+                  <span id="skyVisibilityBadge" class="text-xs font-semibold text-lavender">
+                    Утечка света вверх: показана схематично
+                  </span>
+                </div>
+
+                <!-- Силуэт опоры освещения и земли -->
+                <div class="relative z-10 flex flex-col items-center mt-auto">
+                  <!-- Плафон светильника -->
+                  <div class="w-16 h-4 rounded-t-full bg-lavender border border-pure/50 shadow-[0_0_25px_#7650F5]"></div>
+                  <!-- Опора -->
+                  <div class="w-1.5 h-36 sm:h-44 bg-gradient-to-b from-lavender to-white/20"></div>
+                  <!-- Линия горизонта / тротуар -->
+                  <div class="w-full h-3 rounded-full bg-gradient-to-r from-transparent via-electric/60 to-transparent"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Правая колонка управления и описания (6 колонок) -->
+            <div class="lg:col-span-6 order-1 lg:order-2 space-y-6">
+              <div class="flex items-center gap-4">
+                <span class="font-display text-3xl sm:text-4xl font-extrabold text-electric">04</span>
+                <span class="h-px flex-1 bg-gradient-to-r from-electric to-transparent"></span>
+              </div>
+
+              <h3 class="font-display font-bold text-2xl sm:text-3xl lg:text-4xl leading-tight text-pure">
+                Возможные решения
+              </h3>
+
+              <p class="text-sm sm:text-base text-pure/75 leading-relaxed">
+                Сохранение тёмного неба не требует отключения городов. Экранированная оптика, направленное вниз излучение и адаптивное управление помогают снижать лишнюю засветку. Тёплый свет не является универсальным решением: итоговое воздействие определяется спектром, яркостью, направлением и экологическим контекстом.
+              </p>
+
+              <!-- Интерактивный переключатель сценария освещения -->
+              <div class="space-y-3">
+                <span class="block text-xs font-display uppercase tracking-wider text-lavender">Сравните световой сценарий:</span>
+                <div class="flex flex-wrap gap-2.5">
+                  <button type="button" id="btnUnshielded" aria-pressed="true" class="px-5 py-3 rounded-full text-xs font-display uppercase tracking-wider font-semibold bg-electric text-pure transition-all">
+                    Обычный светильник
+                  </button>
+                  <button type="button" id="btnShielded" aria-pressed="false" class="px-5 py-3 rounded-full text-xs font-display uppercase tracking-wider font-semibold bg-white/10 text-pure/75 hover:text-pure transition-all">
+                    Умное экранирование
+                  </button>
+                </div>
+              </div>
+
+              <div class="pt-2">
+                <button type="button" data-modal-title="04 / Стандарты ответственного освещения" class="open-preview-modal inline-flex items-center gap-3 px-6 py-3.5 rounded-full bg-pure text-obsidian hover:bg-lavender font-display text-xs uppercase tracking-wider font-bold transition-colors">
+                  <span>Рекомендации проекта</span>
+                  <span>→</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== СИТУАЦИЯ В КАЗАХСТАНЕ ==================== -->
+  <section id="kazakhstan-statistics" class="relative overflow-hidden bg-[#0D0D16] border-t border-white/10 py-20 sm:py-28 px-5 sm:px-8 lg:px-12">
+    <div class="absolute right-[-180px] top-24 w-[420px] h-[420px] rounded-full bg-electric/20 blur-[110px]"></div>
+    <div class="relative max-w-[1440px] mx-auto">
+      <div class="reveal-item grid grid-cols-1 lg:grid-cols-12 gap-10 items-end">
+        <div class="lg:col-span-7">
+          <span class="inline-flex px-4 py-1.5 rounded-full border border-electric/40 bg-electric/15 text-lavender text-xs font-display uppercase tracking-widest">Исследование World Bank • Астана и Алматы</span>
+          <h2 class="mt-5 font-display font-bold text-3xl sm:text-5xl lg:text-6xl leading-[1.05] uppercase">Масштаб освещения<br><span class="text-lavender">по данным World Bank</span></h2>
+        </div>
+        <p class="lg:col-span-5 text-sm sm:text-base text-pure/70 leading-relaxed">
+          Исследование охватывает именно Астану и Алматы. Показатели не являются общей статистикой по Казахстану. Энергетические данные отчёта привязаны к базовому 2015 году.
+        </p>
+      </div>
+
+      <div class="reveal-item mt-14 grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div class="lg:col-span-8 rounded-5xl border border-lavender/20 bg-obsidian p-6 sm:p-9">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="rounded-4xl border border-white/10 p-5 sm:p-6">
+              <span class="text-xs uppercase tracking-widest text-lavender">Астана</span>
+              <strong class="mt-3 block font-display text-5xl sm:text-6xl">98%</strong>
+              <p class="mt-3 text-sm text-pure/60">охват уличным освещением</p>
+            </div>
+            <div class="rounded-4xl border border-white/10 p-5 sm:p-6">
+              <span class="text-xs uppercase tracking-widest text-lavender">Алматы</span>
+              <strong class="mt-3 block font-display text-5xl sm:text-6xl">92%</strong>
+              <p class="mt-3 text-sm text-pure/60">охват в городе</p>
+            </div>
+            <div class="rounded-4xl border border-white/10 p-5 sm:p-6">
+              <span class="text-xs uppercase tracking-widest text-lavender">Пригороды</span>
+              <strong class="mt-3 block font-display text-5xl sm:text-6xl">80%</strong>
+              <p class="mt-3 text-sm text-pure/60">охват Алматы</p>
+            </div>
+          </div>
+          <div class="mt-5 flex items-center gap-4 rounded-3xl bg-electric/10 border border-electric/30 p-5">
+            <span class="font-display text-4xl text-lavender">до 50%</span>
+            <p class="text-sm text-pure/70">оценённый потенциал энергосбережения в секторе уличного освещения по исследованиям World Bank. Потенциал не означает фактически достигнутой экономии.</p>
+          </div>
+          <p class="mt-4 text-xs leading-relaxed text-pure/55">В исследовательской базе проекта не зафиксирована точная библиографическая ссылка на первичный отчёт World Bank; числовые показатели требуют сверки с оригиналом.</p>
+        </div>
+
+        <aside class="lg:col-span-4 rounded-5xl bg-electric p-6 sm:p-9 text-pure">
+          <span class="text-xs font-display uppercase tracking-widest">Плановая модернизация Алматы</span>
+          <h3 class="mt-4 font-display text-2xl leading-tight">Заявленный объём работ</h3>
+          <div class="mt-8 space-y-6">
+            <div class="border-b border-pure/25 pb-5"><strong class="font-display text-4xl">45 000</strong><p class="mt-1 text-sm text-pure/80">планируемых светильников</p></div>
+            <div class="border-b border-pure/25 pb-5"><strong class="font-display text-4xl">1 375 км</strong><p class="mt-1 text-sm text-pure/80">линий наружного освещения</p></div>
+            <div><strong class="font-display text-4xl">42 000</strong><p class="mt-1 text-sm text-pure/80">планируемых опор</p></div>
+          </div>
+          <p class="mt-6 text-xs text-pure/75 leading-relaxed">Это плановые показатели, а не общенациональная статистика или подтверждённые результаты завершённых работ.</p>
+          <p class="mt-3 text-xs text-pure/65 leading-relaxed">Первичный официальный документ с этими плановыми значениями в материалах проекта не указан; их необходимо дополнительно подтвердить.</p>
+        </aside>
+      </div>
+
+      <div class="reveal-item mt-5 rounded-4xl border border-white/10 bg-[#11111C] p-6 sm:p-8">
+        <h3 class="font-display text-xl">Почему в открытых данных нет единой картины?</h3>
+        <p class="mt-3 max-w-4xl text-sm text-pure/70 leading-relaxed">По уличному освещению Казахстана отсутствует единая регулярно обновляемая открытая база с сопоставимыми данными по типам светильников, потреблению, графикам работы и охвату всех регионов. Поэтому проект не заменяет проверенную общенациональную статистику отдельными оценками или фрагментарными показателями.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== РЕЗУЛЬТАТЫ ОПРОСА ==================== -->
+  <section id="survey-results" class="relative bg-obsidian py-20 sm:py-28 px-5 sm:px-8 lg:px-12 grid-subtle">
+    <div class="max-w-[1440px] mx-auto">
+      <div class="reveal-item flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+        <div>
+          <span class="text-xs font-display uppercase tracking-widest text-lavender">Онлайн-опрос • Собственные результаты проекта</span>
+          <h2 class="mt-4 font-display font-bold text-3xl sm:text-5xl uppercase">Что знают участники<br><span class="text-lavender">о ночном свете</span></h2>
+        </div>
+        <div class="flex items-center gap-4 rounded-4xl border border-lavender/20 bg-[#0D0D16] px-6 py-5">
+          <strong class="font-display text-5xl text-lavender">24</strong>
+          <span class="text-sm text-pure/65">участника<br>опроса</span>
+        </div>
+      </div>
+
+      <div class="reveal-item mt-12 grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div id="surveyTabs" class="lg:col-span-3 flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
+          <button class="survey-tab min-w-max lg:w-full text-left px-5 py-4 rounded-2xl bg-electric text-pure text-sm font-semibold" aria-pressed="true" data-survey="awareness">Знакомство с темой</button>
+          <button class="survey-tab min-w-max lg:w-full text-left px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-pure/70 text-sm" aria-pressed="false" data-survey="sleep">Влияние на засыпание</button>
+          <button class="survey-tab min-w-max lg:w-full text-left px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-pure/70 text-sm" aria-pressed="false" data-survey="melatonin">Знание о мелатонине</button>
+          <button class="survey-tab min-w-max lg:w-full text-left px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-pure/70 text-sm" aria-pressed="false" data-survey="nature">Влияние на природу</button>
+          <button class="survey-tab min-w-max lg:w-full text-left px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-pure/70 text-sm" aria-pressed="false" data-survey="stars">Видимость звёзд</button>
+          <button class="survey-tab min-w-max lg:w-full text-left px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-pure/70 text-sm" aria-pressed="false" data-survey="energy">Потери электроэнергии</button>
+          <button class="survey-tab min-w-max lg:w-full text-left px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-pure/70 text-sm" aria-pressed="false" data-survey="solutions">Предпочитаемые решения</button>
+        </div>
+        <div class="lg:col-span-9 rounded-5xl border border-lavender/20 bg-[#0D0D16] p-6 sm:p-9">
+          <div class="flex items-start justify-between gap-4">
+            <h3 id="surveyQuestion" class="font-display text-xl sm:text-2xl"></h3>
+            <span class="shrink-0 px-3 py-1.5 rounded-full bg-electric/20 text-lavender text-xs">n = 24</span>
+          </div>
+          <div id="surveyChart" class="mt-8 space-y-5" aria-live="polite"></div>
+          <p id="surveyInsight" class="mt-8 rounded-3xl border border-electric/30 bg-electric/10 p-5 text-sm leading-relaxed text-pure/75"></p>
+        </div>
+      </div>
+      <p class="mt-5 text-xs text-pure/45">Результаты проведённого опроса относятся к 24 участникам и не являются репрезентативными для всего населения Казахстана.</p>
+    </div>
+  </section>
+
+  <!-- ==================== QR-КОД ИНТЕРАКТИВНОЙ КАРТЫ ==================== -->
+  <section id="interactive-map" class="relative overflow-hidden py-20 sm:py-28 px-5 sm:px-8 lg:px-12 bg-gradient-to-br from-[#17102B] via-[#0D0D16] to-obsidian">
+    <div class="absolute -left-24 bottom-[-180px] w-[480px] h-[480px] rounded-full bg-electric/25 blur-[130px]"></div>
+    <div class="reveal-item relative max-w-[1440px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      <div class="lg:col-span-7 rounded-5xl border border-lavender/20 bg-obsidian/85 p-7 sm:p-10">
+        <span class="text-xs font-display uppercase tracking-[0.22em] text-lavender">Отдельный проект • Интерактивная карта РК</span>
+        <h2 class="mt-5 font-display font-bold text-3xl sm:text-5xl leading-[1.05] uppercase">Наведи смартфон<br>на ночь страны</h2>
+        <p class="mt-6 max-w-2xl text-sm sm:text-base leading-relaxed text-pure/70">Исследовательская карта светового загрязнения Казахстана показывает распределение искусственного ночного свечения и позволяет перейти к интерактивной визуализации в отдельном проекте.</p>
+        <a href="https://miraskalimolda30-droid.github.io/skyglow/" target="_blank" rel="noopener noreferrer" class="btn-magnetic mt-8 inline-flex items-center gap-3 rounded-full bg-electric px-6 py-4 font-display text-xs uppercase tracking-wider hover:bg-lavender hover:text-obsidian">Открыть интерактивную карту <span>↗</span></a>
+      </div>
+      <div class="lg:col-span-5 flex justify-center">
+        <div class="relative w-full max-w-[430px] rounded-[44px] bg-pure p-5 sm:p-7 text-obsidian shadow-[0_30px_100px_rgba(118,80,245,0.35)]">
+          <div class="absolute -top-4 -right-3 rounded-full bg-electric px-4 py-2 text-pure text-xs font-bold">СКАНИРУЙ</div>
+          <div id="qr-code-slot" class="aspect-square w-full rounded-[28px] border-2 border-dashed border-obsidian/20 flex flex-col items-center justify-center bg-white p-6 text-center">
+            <!-- Пользовательское изображение QR-кода размещается здесь без изменения пропорций -->
+            <img id="qr-code-image" src="night_lights_assets/qr-link.png" alt="QR-код интерактивной карты светового загрязнения Казахстана" class="w-full h-full object-contain">
+            <div id="qr-placeholder" class="hidden space-y-3">
+              <div class="mx-auto grid h-24 w-24 grid-cols-5 gap-1 p-3 opacity-20" aria-hidden="true">
+                <i class="col-span-2 row-span-2 rounded bg-obsidian"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              </div>
+              <p class="font-display text-sm uppercase tracking-wider">QR-код будет размещён здесь</p>
+              <p class="text-xs text-obsidian/60">Предоставленное изображение сохранит пропорции</p>
+            </div>
+          </div>
+          <p class="mt-4 text-center text-xs font-bold uppercase tracking-widest">Отсканируйте код для открытия карты</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== ВЛИЯНИЕ ==================== -->
+  <section id="full-impact" class="bg-[#0D0D16] border-y border-white/10 py-20 sm:py-28 px-5 sm:px-8 lg:px-12">
+    <div class="max-w-[1440px] mx-auto">
+      <div class="reveal-item flex flex-col lg:flex-row lg:items-end justify-between gap-7">
+        <div><span class="text-xs font-display uppercase tracking-widest text-lavender">Научно-популярный обзор</span><h2 class="mt-4 font-display font-bold text-[clamp(1.125rem,5.8vw,1.5rem)] sm:text-5xl uppercase">Кого затрагивает<br><span class="text-lavender">искусственная ночь</span></h2></div>
+        <p class="max-w-md text-sm text-pure/65 leading-relaxed">Воздействие зависит от интенсивности, спектра, направления света, продолжительности и экологического контекста.</p>
+      </div>
+      <div class="reveal-item mt-12 grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <article class="rounded-5xl border border-lavender/20 bg-obsidian p-7 sm:p-8">
+          <span class="font-display text-5xl text-electric">A</span><h3 class="mt-5 font-display text-2xl">Человек</h3>
+          <ul class="mt-6 space-y-4 text-sm text-pure/70"><li>• Циркадные ритмы</li><li>• Продукция мелатонина в тёмное время</li><li>• Вечернее и ночное воздействие искусственного света</li><li>• Значимость интенсивности и спектра освещения</li></ul>
+        </article>
+        <article class="rounded-5xl border border-lavender/20 bg-obsidian p-7 sm:p-8 lg:-translate-y-6">
+          <span class="font-display text-5xl text-electric">B</span><h3 class="mt-5 font-display text-2xl">Животные и экосистемы</h3>
+          <ul class="mt-6 space-y-4 text-sm text-pure/70"><li>• Нарушение естественных циклов активности</li><li>• Воздействие на ночных насекомых</li><li>• Изменения кормового и миграционного поведения</li><li>• Косвенные последствия для экосистемных связей</li></ul>
+        </article>
+        <article class="rounded-5xl border border-lavender/20 bg-obsidian p-7 sm:p-8">
+          <span class="font-display text-5xl text-electric">C</span><h3 class="mt-5 font-display text-2xl">Ночное небо</h3>
+          <ul class="mt-6 space-y-4 text-sm text-pure/70"><li>• Снижение видимости звёзд</li><li>• Рассеяние света в атмосфере</li><li>• Свечение городского купола над наблюдательными точками</li><li>• Ограничение астрономических наблюдений</li></ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== ЭНЕРГОКАЛЬКУЛЯТОР ==================== -->
+  <section id="energy-calculator" class="relative py-20 sm:py-28 px-5 sm:px-8 lg:px-12 overflow-hidden">
+    <div class="absolute right-[-150px] bottom-[-120px] w-[520px] h-[520px] rounded-full bg-electric/20 blur-[130px]"></div>
+    <div class="relative max-w-[1440px] mx-auto">
+      <div class="reveal-item">
+        <span class="text-xs font-display uppercase tracking-widest text-lavender">Интерактивная математическая модель</span>
+        <h2 class="mt-4 font-display font-bold text-[clamp(1.125rem,5.8vw,1.5rem)] sm:text-5xl uppercase">Калькулятор<br><span class="text-lavender">энергопотребления</span></h2>
+        <p class="mt-5 max-w-3xl rounded-3xl border border-electric/30 bg-electric/10 p-5 text-sm text-pure/75"><strong class="text-pure">Условная иллюстрация.</strong> Исходные параметры являются демонстрационными и не представляют официальную статистику Казахстана.</p>
+      </div>
+      <div class="reveal-item mt-10 grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div class="lg:col-span-5 rounded-5xl border border-lavender/20 bg-[#0D0D16] p-6 sm:p-8 space-y-6">
+          <label class="block"><span class="flex justify-between text-sm"><b>Количество светильников</b><b id="lampCountOut" class="text-lavender">500 000</b></span><input id="lampCount" type="range" min="1000" max="1000000" step="1000" value="500000" class="mt-4 w-full"></label>
+          <label class="block"><span class="flex justify-between text-sm"><b>Мощность одного светильника</b><b id="lampWattOut" class="text-lavender">120 Вт</b></span><input id="lampWatt" type="range" min="20" max="300" step="5" value="120" class="mt-4 w-full"></label>
+          <label class="block"><span class="flex justify-between text-sm"><b>Часы работы в год</b><b id="hoursOut" class="text-lavender">4 200 ч</b></span><input id="yearHours" type="range" min="1000" max="8760" step="100" value="4200" class="mt-4 w-full"></label>
+          <label class="block"><span class="flex justify-between text-sm"><b>Предполагаемая экономия</b><b id="savingOut" class="text-lavender">35%</b></span><input id="savingPercent" type="range" min="0" max="70" step="1" value="35" class="mt-4 w-full"></label>
+          <label class="block"><span class="flex justify-between text-sm"><b>Стоимость электроэнергии</b><b id="tariffOut" class="text-lavender">35 ₸/кВт·ч</b></span><input id="tariff" type="range" min="1" max="100" step="1" value="35" class="mt-4 w-full"></label>
+        </div>
+        <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div class="sm:col-span-2 rounded-5xl bg-electric p-7 sm:p-9 text-pure">
+            <span class="text-xs uppercase tracking-widest">Базовое годовое потребление</span>
+            <strong id="baseGwh" class="mt-3 block font-display text-5xl sm:text-7xl">252 ГВт·ч</strong>
+            <span id="baseKwh" class="mt-3 block text-sm text-pure/75">252 000 000 кВт·ч / год</span>
+          </div>
+          <div class="rounded-4xl border border-lavender/20 bg-[#0D0D16] p-6"><span class="text-xs text-lavender">Экономия энергии</span><strong id="savingKwh" class="mt-3 block font-display text-3xl">88 200 000 кВт·ч</strong><span id="savingGwh" class="mt-2 block text-sm text-pure/60">88,20 ГВт·ч</span></div>
+          <div class="rounded-4xl border border-lavender/20 bg-[#0D0D16] p-6"><span class="text-xs text-lavender">Денежная экономия</span><strong id="savingMoney" class="mt-3 block font-display text-3xl">3,087 млрд ₸</strong><span id="savingMoneyExact" class="mt-2 block text-sm text-pure/75">3 087 000 000 ₸ / год</span><span class="mt-1 block text-xs text-pure/50">при выбранном тарифе</span></div>
+        </div>
+      </div>
+      <div class="reveal-item mt-5 rounded-5xl border border-white/10 bg-[#0D0D16] p-6 sm:p-8">
+        <div class="flex items-center justify-between gap-4"><h3 class="font-display text-xl">Сравнение сценариев экономии</h3><span class="text-xs text-pure/50">для текущих параметров системы</span></div>
+        <div id="scenarioBars" class="mt-7 grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== МЕТОДОЛОГИЯ И ИСТОЧНИКИ ==================== -->
+  <section id="methodology" class="bg-[#0D0D16] border-t border-white/10 py-20 sm:py-28 px-5 sm:px-8 lg:px-12">
+    <div class="max-w-[1440px] mx-auto">
+      <div class="reveal-item">
+        <span class="text-xs font-display uppercase tracking-widest text-lavender">Заключение проекта</span>
+        <h2 class="mt-4 font-display font-bold text-3xl sm:text-5xl uppercase">Методология<br><span class="text-lavender">и источники</span></h2>
+      </div>
+      <div class="reveal-item mt-12 grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <article class="lg:col-span-7 rounded-5xl border border-lavender/20 bg-obsidian p-7 sm:p-9">
+          <h3 class="font-display text-2xl">Исследовательская рамка</h3>
+          <dl class="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6 text-sm">
+            <div><dt class="text-lavender">Актуальность</dt><dd class="mt-2 text-pure/70">Рост искусственного освещения изменяет ночную среду и требует сопоставимой научной и городской оценки.</dd></div>
+            <div><dt class="text-lavender">Цель</dt><dd class="mt-2 text-pure/70">Показать взаимосвязь светового загрязнения, уличного освещения и возможных практических решений.</dd></div>
+            <div><dt class="text-lavender">Объект и предмет</dt><dd class="mt-2 text-pure/70">Объект — искусственное ночное освещение Казахстана; предмет — его состояние, восприятие участниками опроса и способы снижения воздействия.</dd></div>
+            <div><dt class="text-lavender">Задачи</dt><dd class="mt-2 text-pure/70">Систематизировать источники, обобщить ограниченную статистику, визуализировать опрос и объяснить меры световой модернизации.</dd></div>
+          </dl>
+          <div class="mt-8 border-t border-white/10 pt-6 text-sm text-pure/70">
+            <p><strong class="text-pure">Методы:</strong> изучение научных публикаций и официальных отчётов, структурирование данных онлайн-опроса, расчёт иллюстративной энергомодели и визуализация в виде интерактивных интерфейсов.</p>
+            <p class="mt-4"><strong class="text-pure">Результаты проекта:</strong> собранная исследовательская композиция, разделы о состоянии освещения, ответы 24 участников опроса и работающий энергокалькулятор.</p>
+            <p class="mt-4"><strong class="text-pure">Ограничения:</strong> не проведены новые полевые измерения или замеры яркости неба прибором SQM; проект не присваивает местам классы по шкале Бортля. Опрос не репрезентативен для населения Казахстана, расчёт калькулятора условен, а первичные источники ряда городских показателей требуют уточнения.</p>
+            <p class="mt-4"><strong class="text-pure">Практическая значимость:</strong> проект даёт понятную основу для обсуждения экранирования, управления освещением, спектрального выбора и дальнейшего сбора открытых данных.</p>
+          </div>
+        </article>
+        <aside class="lg:col-span-5 space-y-5">
+          <div class="rounded-4xl border border-white/10 bg-[#11111C] p-6 sm:p-7">
+            <h3 class="font-display text-lg text-lavender">Официальная статистика</h3>
+            <ul class="mt-4 space-y-3 text-sm">
+              <li><a class="text-pure/75 hover:text-pure underline underline-offset-4" target="_blank" rel="noopener noreferrer" href="https://www.worldbank.org/en/country/kazakhstan">World Bank — Казахстан</a></li>
+            </ul>
+          </div>
+          <div class="rounded-4xl border border-white/10 bg-[#11111C] p-6 sm:p-7">
+            <h3 class="font-display text-lg text-lavender">Научные исследования</h3>
+            <ul class="mt-4 space-y-3 text-sm">
+              <li><a class="text-pure/75 hover:text-pure underline underline-offset-4" target="_blank" rel="noopener noreferrer" href="https://doi.org/10.1126/sciadv.1600377">Falchi F. et al. <em>The new world atlas of artificial night sky brightness</em>, Sci. Adv., 2016</a></li>
+              <li><a class="text-pure/75 hover:text-pure underline underline-offset-4" target="_blank" rel="noopener noreferrer" href="https://doi.org/10.1126/sciadv.1701528">Kyba C.C.M. et al. <em>Artificially lit surface of Earth at night increasing in radiance and extent</em>, Sci. Adv., 2017</a></li>
+              <li><a class="text-pure/75 hover:text-pure underline underline-offset-4" target="_blank" rel="noopener noreferrer" href="https://doi.org/10.1111/brv.12036">Gaston K.J. et al. <em>The ecological impacts of nighttime light pollution: a mechanistic appraisal</em>, Biol. Rev., 2013</a></li>
+              <li><a class="text-pure/75 hover:text-pure underline underline-offset-4" target="_blank" rel="noopener noreferrer" href="https://doi.org/10.1210/jc.2010-2098">Gooley J.J. et al. <em>Exposure to Room Light before Bedtime Suppresses Melatonin Onset and Shortens Melatonin Duration in Humans</em>, J. Clin. Endocrinol. Metab., 2011</a></li>
+            </ul>
+          </div>
+          <div class="rounded-4xl border border-white/10 bg-[#11111C] p-6 sm:p-7">
+            <h3 class="font-display text-lg text-lavender">Спутниковые данные</h3>
+            <ul class="mt-4 space-y-3 text-sm">
+              <li><a class="text-pure/75 hover:text-pure underline underline-offset-4" target="_blank" rel="noopener noreferrer" href="https://viirsland.gsfc.nasa.gov/Products/NASA/BlackMarble.html">NASA Black Marble — ночные радиометрические продукты</a></li>
+              <li><a class="text-pure/75 hover:text-pure underline underline-offset-4" target="_blank" rel="noopener noreferrer" href="https://earthdata.nasa.gov/data/instruments/viirs">NASA Earthdata — прибор VIIRS</a></li>
+              <li><a class="text-pure/75 hover:text-pure underline underline-offset-4" target="_blank" rel="noopener noreferrer" href="https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/">Natural Earth — границы стран 1:10m</a></li>
+            </ul>
+            <p class="mt-4 text-xs text-pure/50">VIIRS и NASA Black Marble наблюдают ночное излучение; это не прямое измерение потребления электроэнергии. Проект не анализирует спутниковые продукты: текстуры 3D-модели стилизованы и не являются данными VIIRS.</p>
+          </div>
+          <div class="rounded-4xl border border-electric/30 bg-electric/10 p-6 sm:p-7">
+            <h3 class="font-display text-lg text-lavender">Собственные результаты проекта</h3>
+            <p class="mt-3 text-sm text-pure/70">Результаты онлайн-опроса среди 24 участников, интерактивная карта и иллюстративная модель расчёта энергопотребления являются материалами данного проекта и не заменяют официальную статистику.</p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== ФУТЕР ПРОЕКТА ==================== -->
+  <footer class="bg-obsidian border-t border-white/10 py-14 px-5 sm:px-8 lg:px-12">
+    <div class="max-w-[1440px] mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+      
+      <div class="space-y-3">
+        <div class="flex items-center gap-3">
+          <span class="w-8 h-8 rounded-full bg-electric flex items-center justify-center text-pure font-display text-xs font-bold">NL</span>
+          <span class="font-display font-bold text-base tracking-wider uppercase text-pure">
+            NIGHT <span class="text-lavender">LIGHTS</span>
+          </span>
+        </div>
+        <p class="text-xs sm:text-sm text-pure/60 max-w-md">
+          Научно-исследовательский проект об искусственном освещении, экологии ночного неба и устойчивой городской среде в Казахстане.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-4 sm:gap-6 text-xs sm:text-sm text-pure/75">
+        <a href="#top" class="hover:text-lavender transition-colors">Главная</a>
+        <a href="#direction-map" class="hover:text-lavender transition-colors">Карта</a>
+        <a href="#direction-stats" class="hover:text-lavender transition-colors">Статистика</a>
+        <a href="#survey-results" class="hover:text-lavender transition-colors">Опрос</a>
+        <a href="#energy-calculator" class="hover:text-lavender transition-colors">Калькулятор</a>
+        <a href="#direction-impact" class="hover:text-lavender transition-colors">Влияние</a>
+        <a href="#direction-solutions" class="hover:text-lavender transition-colors">Решения</a>
+        <a href="#top" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/15 text-pure hover:bg-electric transition-colors">
+          <span>Наверх</span>
+          <span>↑</span>
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ==================== МОДАЛЬНОЕ ПРЕВЬЮ-УВЕДОМЛЕНИЕ ДЛЯ БУДУЩИХ РАЗДЕЛОВ ==================== -->
+  <div id="previewModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-6 bg-obsidian/80 backdrop-blur-xl" role="dialog" aria-modal="true" aria-labelledby="modalHeading">
+    <div class="relative w-full max-w-lg rounded-5xl bg-[#0F0F1A] border border-lavender/30 p-7 sm:p-9 shadow-[0_30px_90px_rgba(118,80,245,0.35)] transform transition-all">
+      
+      <div class="flex items-center justify-between gap-4 mb-5">
+        <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-electric/20 border border-electric/50 text-lavender font-display text-[11px] uppercase tracking-wider">
+          NIGHT LIGHTS • Справка
+        </span>
+        <button id="closeModalBtn" type="button" aria-label="Закрыть окно" class="w-9 h-9 rounded-full bg-white/10 hover:bg-electric text-pure flex items-center justify-center transition-colors">
+          ✕
+        </button>
+      </div>
+
+      <h4 id="modalHeading" class="font-display font-bold text-xl sm:text-2xl text-pure mb-3">
+        О проекте NIGHT LIGHTS
+      </h4>
+
+      <p id="modalDescription" class="text-sm sm:text-base text-pure/75 leading-relaxed mb-7">
+        NIGHT LIGHTS — научно-популярный проект о световом загрязнении и устойчивой организации ночного освещения.
+      </p>
+
+      <div class="flex items-center justify-end gap-3">
+        <button id="modalConfirmBtn" type="button" class="px-6 py-3 rounded-full bg-electric hover:bg-lavender hover:text-obsidian text-pure font-display text-xs font-semibold uppercase tracking-wider transition-colors">
+          Понятно
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== СКРИПТЫ: THREE.JS 3D-ГЛОБУС И ИНТЕРАКТИВ ==================== -->
+  <script>
+    /**
+     * 1. ИНИЦИАЛИЗАЦИЯ ИНТЕРАКТИВНОГО 3D-ГЛОБУСА (THREE.JS)
+     * Стилизованная ночная Земля с фокусом на Казахстан и иллюстративными огнями.
+     */
+    function initThreeGlobe() {
+      const container = document.getElementById('globe-container');
+      if (!container || typeof THREE === 'undefined') return;
+
+      const scene = new THREE.Scene();
+
+      // Камера
+      const camera = new THREE.PerspectiveCamera(
+        42,
+        container.clientWidth / container.clientHeight,
+        0.1,
+        1000
+      );
+      camera.position.set(0, 0.25, 4.3);
+
+      // Рендерер с прозрачным фоном
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+
+      // Главная группа планеты для плавного вращения
+      const globeGroup = new THREE.Group();
+      scene.add(globeGroup);
+
+      // Начальный поворот, чтобы Казахстан (долгота ~67°E, широта ~48°N) смотрел на зрителя
+      const kazakhstanRotation = {
+        x: 0.62,
+        y: -2.02
+      };
+      globeGroup.rotation.x = kazakhstanRotation.x;
+      globeGroup.rotation.y = kazakhstanRotation.y;
+
+      // 1) Земля с иллюстративной ночной текстурой городских огней
+      const sphereGeo = new THREE.SphereGeometry(1.38, 64, 64);
+      const textureLoader = new THREE.TextureLoader();
+      const earthTexture = textureLoader.load('night_lights_assets/earth-surface.png');
+      const cityLightsTexture = textureLoader.load('night_lights_assets/earth-lights.png');
+      earthTexture.encoding = THREE.sRGBEncoding;
+      cityLightsTexture.encoding = THREE.sRGBEncoding;
+      const sphereMat = new THREE.MeshPhongMaterial({
+        map: earthTexture,
+        emissiveMap: cityLightsTexture,
+        color: 0x8792b4,
+        emissive: 0xffbd73,
+        emissiveIntensity: 0.8,
+        specular: 0x171629,
+        shininess: 12
+      });
+      const earthMesh = new THREE.Mesh(sphereGeo, sphereMat);
+      globeGroup.add(earthMesh);
+
+      // 2) Внешний атмосферный ореол (шейдерный Fresnel-эффект)
+      const atmosphereGeo = new THREE.SphereGeometry(1.56, 64, 64);
+      const atmosphereMat = new THREE.ShaderMaterial({
+        transparent: true,
+        side: THREE.BackSide,
+        blending: THREE.AdditiveBlending,
+        vertexShader: `
+          varying vec3 vNormal;
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vNormal;
+          void main() {
+            float facing = abs(dot(normalize(vNormal), vec3(0.0, 0.0, 1.0)));
+            float intensity = pow(1.0 - facing, 3.0) * 0.7;
+            gl_FragColor = vec4(0.463, 0.314, 0.961, 1.0) * intensity;
+          }
+        `
+      });
+      const atmosphereMesh = new THREE.Mesh(atmosphereGeo, atmosphereMat);
+      scene.add(atmosphereMesh);
+
+      // Функция перевода географических координат (lat, lon) в 3D-точку на сфере
+      function latLonToVector3(lat, lon, radius) {
+        const phi = (90 - lat) * (Math.PI / 180);
+        const theta = (lon + 180) * (Math.PI / 180);
+        const x = -(radius * Math.sin(phi) * Math.cos(theta));
+        const z = radius * Math.sin(phi) * Math.sin(theta);
+        const y = radius * Math.cos(phi);
+        return new THREE.Vector3(x, y, z);
+      }
+
+      // 3) Сдержанные маркеры и мягкие ореолы городов Казахстана
+      const cities = [
+        { name: 'Астана', lat: 51.16, lon: 71.47, size: 0.018 },
+        { name: 'Алматы', lat: 43.22, lon: 76.85, size: 0.021 },
+        { name: 'Шымкент', lat: 42.34, lon: 69.59, size: 0.016 },
+        { name: 'Караганда', lat: 49.80, lon: 73.10, size: 0.015 },
+        { name: 'Атырау', lat: 47.09, lon: 51.92, size: 0.015 },
+        { name: 'Актобе', lat: 50.28, lon: 57.16, size: 0.014 },
+        { name: 'Усть-Каменогорск', lat: 49.94, lon: 82.62, size: 0.014 },
+        { name: 'Актау', lat: 43.65, lon: 51.16, size: 0.013 },
+        { name: 'Павлодар', lat: 52.28, lon: 76.96, size: 0.013 },
+        { name: 'Костанай', lat: 53.21, lon: 63.62, size: 0.013 }
+      ];
+
+      cities.forEach((city) => {
+        const pos = latLonToVector3(city.lat, city.lon, 1.395);
+
+        const glowGeo = new THREE.SphereGeometry(city.size * 3.2, 16, 16);
+        const glowMat = new THREE.MeshBasicMaterial({
+          color: 0xffad67,
+          transparent: true,
+          opacity: 0.18,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        });
+        const glow = new THREE.Mesh(glowGeo, glowMat);
+        glow.position.copy(pos);
+        globeGroup.add(glow);
+
+        const dotGeo = new THREE.SphereGeometry(city.size, 16, 16);
+        const dotMat = new THREE.MeshBasicMaterial({ color: 0xffdfaa });
+        const dot = new THREE.Mesh(dotGeo, dotMat);
+        dot.position.copy(pos);
+        globeGroup.add(dot);
+      });
+
+      // 4) Тонкая орбита и сдержанное звёздное поле
+      const orbitRingGeo = new THREE.RingGeometry(1.78, 1.788, 96);
+      const orbitRingMat = new THREE.MeshBasicMaterial({
+        color: 0xb9a4ff,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.14
+      });
+      const orbitRing = new THREE.Mesh(orbitRingGeo, orbitRingMat);
+      orbitRing.rotation.x = Math.PI / 2.6;
+      orbitRing.rotation.y = 0.25;
+      scene.add(orbitRing);
+
+      // Звёздная пыль вокруг орбиты
+      const starsCount = 150;
+      const starsPositions = new Float32Array(starsCount * 3);
+      for (let i = 0; i < starsCount * 3; i += 3) {
+        const r = 2.2 + Math.random() * 2.4;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        starsPositions[i] = r * Math.sin(phi) * Math.cos(theta);
+        starsPositions[i + 1] = r * Math.sin(phi) * Math.sin(theta);
+        starsPositions[i + 2] = r * Math.cos(phi);
+      }
+      const starsGeo = new THREE.BufferGeometry();
+      starsGeo.setAttribute('position', new THREE.BufferAttribute(starsPositions, 3));
+      const starsMat = new THREE.PointsMaterial({
+        color: 0xb9a4ff,
+        size: 0.014,
+        transparent: true,
+        opacity: 0.4
+      });
+      const starField = new THREE.Points(starsGeo, starsMat);
+      scene.add(starField);
+
+      // Освещение сцены
+      const ambientLight = new THREE.AmbientLight(0x687088, 0.55);
+      scene.add(ambientLight);
+
+      const directionalLight = new THREE.DirectionalLight(0x8f9db8, 0.72);
+      directionalLight.position.set(4, 3, 5);
+      scene.add(directionalLight);
+
+      // Интерактивное управление мышью и тачем
+      let isDragging = false;
+      let prevX = 0;
+      let prevY = 0;
+      let targetRotX = kazakhstanRotation.x;
+      let targetRotY = kazakhstanRotation.y;
+      let autoRotateMode = false;
+
+      container.addEventListener('pointerdown', (e) => {
+        isDragging = true;
+        prevX = e.clientX;
+        prevY = e.clientY;
+      });
+
+      window.addEventListener('pointerup', () => {
+        isDragging = false;
+      });
+
+      window.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        const deltaX = e.clientX - prevX;
+        const deltaY = e.clientY - prevY;
+        prevX = e.clientX;
+        prevY = e.clientY;
+
+        targetRotY += deltaX * 0.0065;
+        targetRotX = Math.max(-1.1, Math.min(1.2, targetRotX + deltaY * 0.0065));
+      });
+
+      // Кнопки фокуса камеры (Казахстан / Орбита)
+      const focusButtons = document.querySelectorAll('.globe-focus-btn');
+      focusButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          focusButtons.forEach((b) => {
+            b.classList.remove('bg-electric', 'text-pure');
+            b.classList.add('text-pure/75');
+          });
+          btn.classList.add('bg-electric', 'text-pure');
+          btn.classList.remove('text-pure/75');
+
+          const mode = btn.getAttribute('data-focus');
+          if (mode === 'kazakhstan') {
+            autoRotateMode = false;
+            targetRotX = kazakhstanRotation.x;
+            targetRotY = kazakhstanRotation.y;
+          } else {
+            autoRotateMode = true;
+          }
+        });
+      });
+
+      // Адаптивный ресайз
+      window.addEventListener('resize', () => {
+        if (!container) return;
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+      });
+
+      // Главный цикл анимации
+      const clock = new THREE.Clock();
+      let isGlobeVisible = false;
+      let animationFrameId = null;
+      function animate() {
+        if (!isGlobeVisible) {
+          animationFrameId = null;
+          return;
+        }
+        animationFrameId = requestAnimationFrame(animate);
+        const elapsed = clock.getElapsedTime();
+
+        if (autoRotateMode && !isDragging) {
+          targetRotY += 0.0035;
+        } else if (!isDragging) {
+          // Лёгкое живое покачивание вокруг Казахстана
+          targetRotY = kazakhstanRotation.y + Math.sin(elapsed * 0.45) * 0.14;
+        }
+
+        globeGroup.rotation.x += (targetRotX - globeGroup.rotation.x) * 0.06;
+        globeGroup.rotation.y += (targetRotY - globeGroup.rotation.y) * 0.06;
+
+        orbitRing.rotation.z = elapsed * 0.12;
+        starField.rotation.y = elapsed * 0.03;
+
+        renderer.render(scene, camera);
+      }
+      if ('IntersectionObserver' in window) {
+        const globeObserver = new IntersectionObserver(([entry]) => {
+          isGlobeVisible = entry.isIntersecting;
+          if (isGlobeVisible && animationFrameId === null) {
+            animate();
+          } else if (!isGlobeVisible && animationFrameId !== null) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+          }
+        });
+        globeObserver.observe(container);
+      } else {
+        isGlobeVisible = true;
+        animate();
+      }
+    }
+
+    /**
+     * 2. ИНТЕРАКТИВНЫЕ ЭЛЕМЕНТЫ НАПРАВЛЕНИЙ 01–04
+     */
+    function initInteractiveDirections() {
+      // --- Блок 01: Переключатель режимов карты Казахстана ---
+      const mapBtns = document.querySelectorAll('.map-mode-btn');
+      const layerClusters = document.getElementById('layerClusters');
+      const layerScatter = document.getElementById('layerScatter');
+      const kzContour = document.getElementById('kzContour');
+      const mapModeLabel = document.getElementById('mapModeLabel');
+      const mapModeHint = document.getElementById('mapModeHint');
+
+      mapBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          mapBtns.forEach((b) => {
+            b.classList.remove('bg-electric', 'text-pure');
+            b.classList.add('text-pure/70');
+            b.setAttribute('aria-pressed', 'false');
+          });
+          btn.classList.add('bg-electric', 'text-pure');
+          btn.classList.remove('text-pure/70');
+          btn.setAttribute('aria-pressed', 'true');
+
+          const mode = btn.getAttribute('data-map-mode');
+          if (mode === 'clusters') {
+            layerClusters.style.opacity = '1';
+            layerScatter.style.opacity = '0';
+            kzContour.style.filter = 'none';
+            kzContour.style.opacity = '1';
+            mapModeLabel.textContent = 'Иллюстративные города';
+            mapModeHint.textContent = 'Положение городов условно; яркость не измерена';
+          } else if (mode === 'diffusion') {
+            layerClusters.style.opacity = '0.75';
+            layerScatter.style.opacity = '0.65';
+            kzContour.style.filter = 'none';
+            kzContour.style.opacity = '1';
+            mapModeLabel.textContent = 'Условные ореолы вокруг городов';
+            mapModeHint.textContent = 'Ореолы схематичны; их интенсивность не измерена';
+          } else {
+            layerClusters.style.opacity = '0';
+            layerScatter.style.opacity = '0';
+            kzContour.style.filter = 'none';
+            kzContour.style.opacity = '1';
+            mapModeLabel.textContent = 'Контур Казахстана';
+            mapModeHint.textContent = 'Граница страны основана на данных Natural Earth';
+          }
+        });
+      });
+
+      // --- Блок 03: Переключатель «Человек / Природа» ---
+      const impactData = {
+        human: {
+          lead: 'Искусственный свет в вечернее и ночное время может влиять на циркадные ритмы человека и выработку мелатонина. Результат зависит от времени, интенсивности и спектра.',
+          tag1: 'Циркадный цикл',
+          text1: 'Возможное изменение чувствительности к свету и световых фаз',
+          tag2: 'Спектр и интенсивность',
+          text2: 'Воздействие нельзя оценивать только по цветовой температуре'
+        },
+        nature: {
+          lead: 'Искусственное ночное освещение может нарушать естественные циклы активности и перемещения животных. Важны направление света, его спектр, длительность и местная экология.',
+          tag1: 'Миграционные коридоры',
+          text1: 'Притяжение птиц к ярко освещённым высотным объектам и башням',
+          tag2: 'Ночные экосистемы',
+          text2: 'Нарушение естественного цикла «день — ночь» в пригородных зонах'
+        }
+      };
+
+      const impactBtns = document.querySelectorAll('.impact-btn');
+      const impactLead = document.getElementById('impactLead');
+      const impactTag1 = document.getElementById('impactTag1');
+      const impactText1 = document.getElementById('impactText1');
+      const impactTag2 = document.getElementById('impactTag2');
+      const impactText2 = document.getElementById('impactText2');
+
+      impactBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          impactBtns.forEach((b) => {
+            b.classList.remove('bg-electric', 'text-pure');
+            b.classList.add('text-pure/70');
+            b.setAttribute('aria-pressed', 'false');
+          });
+          btn.classList.add('bg-electric', 'text-pure');
+          btn.classList.remove('text-pure/70');
+          btn.setAttribute('aria-pressed', 'true');
+
+          const mode = btn.getAttribute('data-impact');
+          const content = impactData[mode];
+          if (content) {
+            impactLead.textContent = content.lead;
+            impactTag1.textContent = content.tag1;
+            impactText1.textContent = content.text1;
+            impactTag2.textContent = content.tag2;
+            impactText2.textContent = content.text2;
+          }
+        });
+      });
+
+      // --- Блок 04: Демонстратор экранированного освещения ---
+      const btnUnshielded = document.getElementById('btnUnshielded');
+      const btnShielded = document.getElementById('btnShielded');
+      const lightConeVisual = document.getElementById('lightConeVisual');
+      const demoStarsLayer = document.getElementById('demoStarsLayer');
+      const shieldStatusBadge = document.getElementById('shieldStatusBadge');
+      const skyVisibilityBadge = document.getElementById('skyVisibilityBadge');
+
+      if (btnUnshielded && btnShielded) {
+        btnUnshielded.addEventListener('click', () => {
+          btnUnshielded.classList.add('bg-electric', 'text-pure');
+          btnUnshielded.classList.remove('bg-white/10', 'text-pure/75');
+          btnUnshielded.setAttribute('aria-pressed', 'true');
+          btnShielded.classList.remove('bg-electric', 'text-pure');
+          btnShielded.classList.add('bg-white/10', 'text-pure/75');
+          btnShielded.setAttribute('aria-pressed', 'false');
+
+          lightConeVisual.classList.remove('light-cone-shielded');
+          lightConeVisual.classList.add('light-cone-unshielded');
+          demoStarsLayer.style.opacity = '0.25';
+          shieldStatusBadge.textContent = 'Режим: Неэкранированный рассеянный свет';
+          skyVisibilityBadge.textContent = 'Утечка света вверх: показана схематично';
+        });
+
+        btnShielded.addEventListener('click', () => {
+          btnShielded.classList.add('bg-electric', 'text-pure');
+          btnShielded.classList.remove('bg-white/10', 'text-pure/75');
+          btnShielded.setAttribute('aria-pressed', 'true');
+          btnUnshielded.classList.remove('bg-electric', 'text-pure');
+          btnUnshielded.classList.add('bg-white/10', 'text-pure/75');
+          btnUnshielded.setAttribute('aria-pressed', 'false');
+
+          lightConeVisual.classList.remove('light-cone-unshielded');
+          lightConeVisual.classList.add('light-cone-shielded');
+          demoStarsLayer.style.opacity = '1';
+          shieldStatusBadge.textContent = 'Режим: Направленное экранирование';
+          skyVisibilityBadge.textContent = 'Утечка света вверх: уменьшается в схеме';
+        });
+      }
+    }
+
+    function initSurveyAndCalculator() {
+      const surveyData = {
+        awareness: {
+          question: 'Знакомство с проблемой светового загрязнения',
+          items: [
+            ['Что-то слышали', 12, 50],
+            ['Хорошо знакомы', 7, 29.2],
+            ['Услышали впервые', 5, 20.8]
+          ],
+          insight: 'Половина участников что-то слышала о теме, а ещё 29,2% назвали себя хорошо знакомыми. При этом 20,8% услышали о световом загрязнении впервые.'
+        },
+        sleep: {
+          question: 'Влияние яркого света на засыпание',
+          items: [
+            ['Часто замечают влияние', 10, 41.7],
+            ['Иногда замечают влияние', 12, 50],
+            ['Не замечают влияния', 2, 8.3]
+          ],
+          insight: 'Вопрос объединял яркий свет и экраны. Поэтому ответы нельзя приписывать исключительно уличному освещению: у 91,7% участников влияние хотя бы иногда заметно.'
+        },
+        melatonin: {
+          question: 'Знание о мелатонине',
+          items: [
+            ['Не знали', 14, 58.3],
+            ['Знали', 9, 37.5],
+            ['Затруднились ответить', 1, 4.2]
+          ],
+          insight: 'Большинство участников ранее не знали о мелатонине. Это указывает на потенциальную потребность в понятном просветительском контенте.'
+        },
+        nature: {
+          question: 'Влияние светового загрязнения на природу',
+          items: [
+            ['Слышали, но не считают критичным', 13, 54.2],
+            ['Считают серьёзной проблемой', 8, 33.3],
+            ['Считают, что влияния нет', 3, 12.5]
+          ],
+          insight: 'Более половины участников не считают проблему природы критичной, хотя треть оценивает её как серьёзную.'
+        },
+        stars: {
+          question: 'Видимость звёзд',
+          items: [
+            ['Видят только яркие звёзды', 10, 41.7],
+            ['Считают небо слишком ярким', 10, 41.7],
+            ['Часто видят звёзды', 2, 8.3],
+            ['Не обращали внимания', 2, 8.3]
+          ],
+          insight: 'Две крупнейшие группы участников дали схожие ответы о слабой видимости звёзд или избыточной яркости ночного неба.'
+        },
+        energy: {
+          question: 'Потери электроэнергии',
+          items: [
+            ['Согласны с неэффективным расходом', 16, 66.7],
+            ['Согласны частично', 5, 20.8],
+            ['Не согласны', 3, 12.5]
+          ],
+          insight: 'Две трети участников считают расход электроэнергии неэффективным. Это мнение опрошенной группы, а не оценка фактических потерь по стране.'
+        },
+        solutions: {
+          question: 'Предпочтительные решения',
+          items: [
+            ['Тёплое уличное освещение', 8, 33.3],
+            ['Ограничение рекламы и подсветки зданий', 7, 29.2],
+            ['Умное освещение', 6, 25],
+            ['Образование', 2, 8.3],
+            ['Не определились', 1, 4.2]
+          ],
+          insight: 'Лидирующие варианты — тёплое освещение, ограничение рекламы и подсветки и умные системы. Одновременное обсуждение спектра, экранирования и управления важнее выбора одного универсального решения.'
+        }
+      };
+
+      const chart = document.getElementById('surveyChart');
+      const question = document.getElementById('surveyQuestion');
+      const insight = document.getElementById('surveyInsight');
+      const tabs = document.querySelectorAll('.survey-tab');
+
+      function renderSurvey(mode) {
+        const data = surveyData[mode];
+        if (!data) return;
+        question.textContent = data.question;
+        insight.textContent = data.insight;
+        chart.innerHTML = data.items.map(([label, count, percent]) => `
+          <div>
+            <div class="mb-2 flex items-end justify-between gap-4">
+              <span class="text-sm text-pure/80">${label}</span>
+              <span class="shrink-0 text-sm font-bold text-lavender">${count} · ${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format(percent)}%</span>
+            </div>
+            <div class="h-3 overflow-hidden rounded-full bg-white/10">
+              <div class="survey-bar h-full rounded-full bg-gradient-to-r from-electric to-lavender" style="width:${percent}%"></div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      tabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+          tabs.forEach((item) => {
+            item.classList.remove('bg-electric', 'text-pure', 'font-semibold');
+            item.classList.add('bg-white/5', 'border', 'border-white/10', 'text-pure/70');
+            item.setAttribute('aria-pressed', 'false');
+          });
+          tab.classList.add('bg-electric', 'text-pure', 'font-semibold');
+          tab.classList.remove('bg-white/5', 'border', 'border-white/10', 'text-pure/70');
+          tab.setAttribute('aria-pressed', 'true');
+          renderSurvey(tab.dataset.survey);
+        });
+      });
+      renderSurvey('awareness');
+
+      const lampCount = document.getElementById('lampCount');
+      const lampWatt = document.getElementById('lampWatt');
+      const yearHours = document.getElementById('yearHours');
+      const savingPercent = document.getElementById('savingPercent');
+      const tariff = document.getElementById('tariff');
+
+      const ruNumber = (value) => new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(value);
+      const ruDecimal = (value, digits = 2) => new Intl.NumberFormat('ru-RU', { maximumFractionDigits: digits }).format(value);
+      const moneyLabel = (value) => {
+        if (value >= 1e9) return `${ruDecimal(value / 1e9, 3)} млрд ₸`;
+        if (value >= 1e6) return `${ruDecimal(value / 1e6, 3)} млн ₸`;
+        return `${ruNumber(value)} ₸`;
+      };
+
+      function calculate() {
+        const lamps = Number(lampCount.value);
+        const watts = Number(lampWatt.value);
+        const hours = Number(yearHours.value);
+        const saving = Number(savingPercent.value);
+        const price = Number(tariff.value);
+        const baseKwh = lamps * watts * hours / 1000;
+        const savingKwh = baseKwh * saving / 100;
+        const savingGwh = savingKwh / 1e6;
+        const savingMoney = savingKwh * price;
+
+        document.getElementById('lampCountOut').textContent = ruNumber(lamps);
+        document.getElementById('lampWattOut').textContent = `${ruNumber(watts)} Вт`;
+        document.getElementById('hoursOut').textContent = `${ruNumber(hours)} ч`;
+        document.getElementById('savingOut').textContent = `${saving}%`;
+        document.getElementById('tariffOut').textContent = `${ruNumber(price)} ₸/кВт·ч`;
+        document.getElementById('baseGwh').textContent = `${ruDecimal(baseKwh / 1e6)} ГВт·ч`;
+        document.getElementById('baseKwh').textContent = `${ruNumber(baseKwh)} кВт·ч / год`;
+        document.getElementById('savingKwh').textContent = `${ruNumber(savingKwh)} кВт·ч`;
+        document.getElementById('savingGwh').textContent = `${ruDecimal(savingGwh)} ГВт·ч`;
+        document.getElementById('savingMoney').textContent = moneyLabel(savingMoney);
+        document.getElementById('savingMoneyExact').textContent = `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(savingMoney)} ₸ / год`;
+
+        const bars = document.getElementById('scenarioBars');
+        bars.innerHTML = [10, 20, 30].map((percent) => {
+          const gwh = baseKwh * percent / 100 / 1e6;
+          const money = baseKwh * percent / 100 * price;
+          return `
+            <div class="rounded-3xl border border-white/10 p-5">
+              <div class="flex items-center justify-between"><span class="font-display text-lg">${percent}% экономии</span><span class="text-xs text-lavender">${ruDecimal(gwh)} ГВт·ч</span></div>
+              <div class="mt-4 h-2 rounded-full bg-white/10"><div class="h-full rounded-full bg-lavender" style="width:${percent * 3.333}%"></div></div>
+              <strong class="mt-4 block text-sm">${moneyLabel(money)}</strong>
+            </div>`;
+        }).join('');
+      }
+
+      [lampCount, lampWatt, yearHours, savingPercent, tariff].forEach((input) => input.addEventListener('input', calculate));
+      calculate();
+    }
+
+    /**
+     * 3. МОДАЛЬНОЕ ОКНО-ЗАГЛУШКА, МОБИЛЬНОЕ МЕНЮ И АНИМАЦИИ ПОЯВЛЕНИЯ
+     */
+    function initUIAndAnimations() {
+      // Мобильное меню
+      const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+      const mobileMenu = document.getElementById('mobileMenu');
+      const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
+
+      if (mobileMenuBtn && mobileMenu) {
+        mobileMenuBtn.addEventListener('click', () => {
+          const isOpen = mobileMenu.classList.toggle('hidden') === false;
+          mobileMenuBtn.setAttribute('aria-expanded', String(isOpen));
+          mobileMenuBtn.setAttribute('aria-label', isOpen ? 'Закрыть меню' : 'Открыть меню');
+        });
+        mobileNavLinks.forEach((link) => {
+          link.addEventListener('click', () => {
+            mobileMenu.classList.add('hidden');
+            mobileMenuBtn.setAttribute('aria-expanded', 'false');
+            mobileMenuBtn.setAttribute('aria-label', 'Открыть меню');
+          });
+        });
+      }
+
+      // Модальное окно превью разделов
+      const previewModal = document.getElementById('previewModal');
+      const modalHeading = document.getElementById('modalHeading');
+      const modalDescription = document.getElementById('modalDescription');
+      const closeModalBtn = document.getElementById('closeModalBtn');
+      const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+      const openModalTriggers = document.querySelectorAll('.open-preview-modal');
+      let lastModalTrigger = null;
+
+      function openModal(title) {
+        if (!previewModal) return;
+        lastModalTrigger = document.activeElement;
+        modalHeading.textContent = title || 'О проекте NIGHT LIGHTS';
+        if (modalDescription) {
+          modalDescription.textContent = title && title.includes('экологическое')
+            ? 'Раздел рассматривает возможные влияния искусственного освещения на человека и природу без медицинских или причинно-следственных преувеличений.'
+            : title && title.includes('Стандарты')
+            ? 'Практические меры должны учитывать экранирование, направленность света, яркость, время работы и экологический контекст.'
+            : 'NIGHT LIGHTS объединяет городскую статистику, научные публикации, результаты собственного опроса и интерактивные инструменты.';
+        }
+        previewModal.classList.remove('hidden');
+        previewModal.classList.add('flex');
+        if (mobileMenu) {
+          mobileMenu.classList.add('hidden');
+          mobileMenuBtn?.setAttribute('aria-expanded', 'false');
+          mobileMenuBtn?.setAttribute('aria-label', 'Открыть меню');
+        }
+        closeModalBtn?.focus();
+      }
+
+      function closeModal() {
+        if (!previewModal) return;
+        previewModal.classList.add('hidden');
+        previewModal.classList.remove('flex');
+        lastModalTrigger?.focus();
+      }
+
+      openModalTriggers.forEach((trigger) => {
+        trigger.addEventListener('click', () => {
+          const title = trigger.getAttribute('data-modal-title');
+          openModal(title);
+        });
+      });
+
+      if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+      if (modalConfirmBtn) modalConfirmBtn.addEventListener('click', closeModal);
+      if (previewModal) {
+        previewModal.addEventListener('click', (e) => {
+          if (e.target === previewModal) closeModal();
+        });
+      }
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && previewModal && !previewModal.classList.contains('hidden')) {
+          closeModal();
+        }
+      });
+
+      // Плавное появление блоков при прокрутке
+      const revealItems = document.querySelectorAll('.reveal-item');
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.12 }
+      );
+      revealItems.forEach((item) => observer.observe(item));
+    }
+
+    // Запуск всех модулей после полной загрузки окна
+    window.onload = function () {
+      initThreeGlobe();
+      initInteractiveDirections();
+      initSurveyAndCalculator();
+      initUIAndAnimations();
+    };
+  </script>
+</body>
+</html>
